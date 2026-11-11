@@ -33,3 +33,28 @@ Exemplo com `curl`:
 ```bash
 curl -i "http://localhost:8080/chamados?status=ABERTO&prioridade=ALTA&page=0&size=5&sort=dataAbertura,desc"
 ```
+
+## Documentação da API (OpenAPI/Swagger)
+
+Com a aplicação rodando:
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Especificação OpenAPI (JSON): `http://localhost:8080/v3/api-docs`
+
+## Executar com PostgreSQL (profile `postgres`)
+
+Por padrão a aplicação usa H2 em memória. Para usar PostgreSQL, suba um banco e ative o profile:
+
+```bash
+docker run --name chamados-db -e POSTGRES_DB=chamadosdb -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16
+./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+```
+
+Valores padrão: `jdbc:postgresql://localhost:5432/chamadosdb`, usuário `postgres`, senha `postgres`.
+Para outro banco, defina as variáveis `DB_URL`, `DB_USER` e `DB_PASSWORD`.
+
+## Testes
+
+```bash
+./mvnw test
+```

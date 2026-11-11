@@ -1,7 +1,9 @@
 package br.com.sistemas.chamados.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -11,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -79,5 +82,14 @@ class ClienteControllerTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.status").value(404))
             .andExpect(jsonPath("$.erro").value("Cliente 99 não encontrado"));
+    }
+
+    @Test
+    void excluirClienteComChamadosDeveRetornar409() throws Exception {
+        doThrow(new DataIntegrityViolationException("fk")).when(service).excluir(1L);
+
+        mockMvc.perform(delete("/clientes/1"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.status").value(409));
     }
 }
