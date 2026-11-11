@@ -6,16 +6,21 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.sistemas.chamados.dto.AlterarStatusRequest;
+import br.com.sistemas.chamados.dto.AtribuirTecnicoRequest;
 import br.com.sistemas.chamados.dto.ChamadoRequest;
 import br.com.sistemas.chamados.dto.ChamadoResponse;
 import br.com.sistemas.chamados.entity.Categoria;
 import br.com.sistemas.chamados.entity.Chamado;
 import br.com.sistemas.chamados.entity.Cliente;
 import br.com.sistemas.chamados.entity.StatusChamado;
+import br.com.sistemas.chamados.entity.Tecnico;
 import br.com.sistemas.chamados.exception.RecursoNaoEncontradoException;
+import br.com.sistemas.chamados.exception.RegraNegocioException;
 import br.com.sistemas.chamados.repository.CategoriaRepository;
 import br.com.sistemas.chamados.repository.ChamadoRepository;
 import br.com.sistemas.chamados.repository.ClienteRepository;
+import br.com.sistemas.chamados.repository.TecnicoRepository;
 
 @Service
 public class ChamadoService {
@@ -23,13 +28,16 @@ public class ChamadoService {
     private final ChamadoRepository repository;
     private final ClienteRepository clienteRepository;
     private final CategoriaRepository categoriaRepository;
+    private final TecnicoRepository tecnicoRepository;
 
     public ChamadoService(ChamadoRepository repository,
                           ClienteRepository clienteRepository,
-                          CategoriaRepository categoriaRepository) {
+                          CategoriaRepository categoriaRepository,
+                          TecnicoRepository tecnicoRepository) {
         this.repository = repository;
         this.clienteRepository = clienteRepository;
         this.categoriaRepository = categoriaRepository;
+        this.tecnicoRepository = tecnicoRepository;
     }
 
     @Transactional
@@ -57,6 +65,7 @@ public class ChamadoService {
     @Transactional
     public ChamadoResponse atualizar(Long id, ChamadoRequest dto) {
         Chamado chamado = buscarEntity(id);
+        garantirNaoFechado(chamado);
         chamado.setTitulo(dto.titulo());
         chamado.setDescricao(dto.descricao());
         chamado.setPrioridade(dto.prioridade());
@@ -66,8 +75,37 @@ public class ChamadoService {
     }
 
     @Transactional
+    public ChamadoResponse atribuir(Long id, AtribuirTecnicoRequest dto) {
+        Chamado chamado = buscarEntity(id);
+        garantirNaoFechado(chamado);
+        Tecnico tecnico = tecnicoRepository.findById(dto.tecnicoId())
+            .orElseThrow(() -> new RecursoNaoEncontradoException(
+                "Técnico " + dto.tecnicoId() + " não encontrado"));
+        chamado.setTecnico(tecnico);
+        return ChamadoResponse.de(chamado);
+    }
+
+    @Transactional
+    public ChamadoResponse alterarStatus(Long id, AlterarStatusRequest dto) {
+        Chamado chamado = buscarEntity(id);
+        garantirNaoFechado(chamado);
+        chamado.setStatus(dto.status());
+        if (dto.status() == StatusChamado.FECHADO) {
+            chamado.setDataFechamento(LocalDateTime.now());
+        }
+        return ChamadoResponse.de(chamado);
+    }
+
+    @Transactional
     public void excluir(Long id) {
         repository.delete(buscarEntity(id));
+    }
+
+    private void garantirNaoFechado(Chamado chamado) {
+        if (chamado.getStatus() == StatusChamado.FECHADO) {
+            throw new RegraNegocioException(
+                "Chamado " + chamado.getId() + " está fechado e não pode ser alterado");
+        }
     }
 
     private Chamado buscarEntity(Long id) {
