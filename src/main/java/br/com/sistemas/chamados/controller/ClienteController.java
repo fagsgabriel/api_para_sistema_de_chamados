@@ -3,6 +3,7 @@ package br.com.sistemas.chamados.controller;
 import java.net.URI;
 import java.util.List;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +55,7 @@ public class ClienteController {
     @GetMapping("/{id}/chamados")
     public Page<ChamadoResponse> listarChamados(
             @PathVariable Long id,
-            Pageable pageable) {
+            @ParameterObject Pageable pageable) {
         return chamadoService.listarPorCliente(id, pageable);
     }
 
