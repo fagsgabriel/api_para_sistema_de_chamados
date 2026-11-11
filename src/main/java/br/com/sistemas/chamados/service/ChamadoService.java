@@ -1,6 +1,7 @@
 package br.com.sistemas.chamados.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,10 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.sistemas.chamados.dto.AlterarStatusRequest;
 import br.com.sistemas.chamados.dto.AtribuirTecnicoRequest;
 import br.com.sistemas.chamados.dto.ChamadoRequest;
+import br.com.sistemas.chamados.dto.ChamadoDetalheResponse;
 import br.com.sistemas.chamados.dto.ChamadoResponse;
+import br.com.sistemas.chamados.dto.ComentarioRequest;
+import br.com.sistemas.chamados.dto.ComentarioResponse;
 import br.com.sistemas.chamados.entity.Categoria;
 import br.com.sistemas.chamados.entity.Chamado;
 import br.com.sistemas.chamados.entity.Cliente;
+import br.com.sistemas.chamados.entity.Comentario;
 import br.com.sistemas.chamados.entity.Prioridade;
 import br.com.sistemas.chamados.entity.StatusChamado;
 import br.com.sistemas.chamados.entity.Tecnico;
@@ -22,6 +27,7 @@ import br.com.sistemas.chamados.exception.RegraNegocioException;
 import br.com.sistemas.chamados.repository.CategoriaRepository;
 import br.com.sistemas.chamados.repository.ChamadoRepository;
 import br.com.sistemas.chamados.repository.ClienteRepository;
+import br.com.sistemas.chamados.repository.ComentarioRepository;
 import br.com.sistemas.chamados.repository.TecnicoRepository;
 
 @Service
@@ -31,15 +37,18 @@ public class ChamadoService {
     private final ClienteRepository clienteRepository;
     private final CategoriaRepository categoriaRepository;
     private final TecnicoRepository tecnicoRepository;
+    private final ComentarioRepository comentarioRepository;
 
     public ChamadoService(ChamadoRepository repository,
                           ClienteRepository clienteRepository,
                           CategoriaRepository categoriaRepository,
-                          TecnicoRepository tecnicoRepository) {
+                          TecnicoRepository tecnicoRepository,
+                          ComentarioRepository comentarioRepository) {
         this.repository = repository;
         this.clienteRepository = clienteRepository;
         this.categoriaRepository = categoriaRepository;
         this.tecnicoRepository = tecnicoRepository;
+        this.comentarioRepository = comentarioRepository;
     }
 
     @Transactional
@@ -71,8 +80,19 @@ public class ChamadoService {
     }
 
     @Transactional(readOnly = true)
-    public ChamadoResponse buscar(Long id) {
-        return ChamadoResponse.de(buscarEntity(id));
+    public ChamadoDetalheResponse buscar(Long id) {
+        Chamado chamado = buscarEntity(id);
+        List<ComentarioResponse> comentarios = comentarioRepository
+            .findByChamadoIdOrderByDataAsc(id).stream().map(ComentarioResponse::de).toList();
+        return ChamadoDetalheResponse.de(ChamadoResponse.de(chamado), comentarios);
+    }
+
+    @Transactional
+    public ComentarioResponse comentar(Long id, ComentarioRequest dto) {
+        Chamado chamado = buscarEntity(id);
+        Comentario comentario = new Comentario(dto.texto(), dto.autor(), chamado);
+        comentario.setData(LocalDateTime.now());
+        return ComentarioResponse.de(comentarioRepository.save(comentario));
     }
 
     @Transactional
@@ -111,7 +131,9 @@ public class ChamadoService {
 
     @Transactional
     public void excluir(Long id) {
-        repository.delete(buscarEntity(id));
+        Chamado chamado = buscarEntity(id);
+        comentarioRepository.deleteAll(comentarioRepository.findByChamadoIdOrderByDataAsc(id));
+        repository.delete(chamado);
     }
 
     private void garantirNaoFechado(Chamado chamado) {

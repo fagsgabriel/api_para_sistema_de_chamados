@@ -2,6 +2,7 @@ package br.com.sistemas.chamados.controller;
 
 import java.net.URI;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.sistemas.chamados.dto.AlterarStatusRequest;
 import br.com.sistemas.chamados.dto.AtribuirTecnicoRequest;
 import br.com.sistemas.chamados.dto.ChamadoRequest;
+import br.com.sistemas.chamados.dto.ChamadoDetalheResponse;
 import br.com.sistemas.chamados.dto.ChamadoResponse;
+import br.com.sistemas.chamados.dto.ComentarioRequest;
+import br.com.sistemas.chamados.dto.ComentarioResponse;
 import br.com.sistemas.chamados.entity.Prioridade;
 import br.com.sistemas.chamados.entity.StatusChamado;
 import br.com.sistemas.chamados.service.ChamadoService;
@@ -47,12 +51,12 @@ public class ChamadoController {
             @RequestParam(required = false) StatusChamado status,
             @RequestParam(required = false) Prioridade prioridade,
             @RequestParam(required = false) Long clienteId,
-            Pageable pageable) {
+            @ParameterObject Pageable pageable) {
         return service.listar(status, prioridade, clienteId, pageable);
     }
 
     @GetMapping("/{id}")
-    public ChamadoResponse buscar(@PathVariable Long id) {
+    public ChamadoDetalheResponse buscar(@PathVariable Long id) {
         return service.buscar(id);
     }
 
@@ -75,6 +79,14 @@ public class ChamadoController {
             @PathVariable Long id,
             @Valid @RequestBody AlterarStatusRequest dto) {
         return service.alterarStatus(id, dto);
+    }
+
+    @PostMapping("/{id}/comentarios")
+    public ResponseEntity<ComentarioResponse> comentar(
+            @PathVariable Long id,
+            @Valid @RequestBody ComentarioRequest dto) {
+        ComentarioResponse criado = service.comentar(id, dto);
+        return ResponseEntity.created(URI.create("/chamados/" + id)).body(criado);
     }
 
     @DeleteMapping("/{id}")
